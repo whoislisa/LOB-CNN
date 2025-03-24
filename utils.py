@@ -55,24 +55,23 @@ def transformed_price(price: float, best_bid: float, tick_size=0.01) -> int:
     else:
         return max(-20, round(- ((abs(rel_price) - 1) // PLOT_K + PLOT_M)))
 
-def single_image(snapshot_df: pd.DataFrame, record_cnt=5) -> list:
+def single_image(snapshot_df: pd.DataFrame, record_cnt=5, pred_cnt=5) -> list:
     """
     生成单张图像
-    :param snapshot_df: 包含 Level 2 数据的 DataFrame, shape[0] >= record_cnt + 30 
+    :param snapshot_df: 包含 Level 2 数据的 DataFrame, shape[0] > record_cnt
     :param record_cnt: 记录数量
     :return: list in the form of [np.array(image_size), binary, binary]. The binaries (0./1.) are the label of ret5, ret30
     
     Note: A single record's data occupies 3 pixels (width)
     
     """
-    assert snapshot_df.shape[0] >= record_cnt + 30, "Error: expected snapshot_df.shape[0] < record_cnt + 30"
+    assert snapshot_df.shape[0] > record_cnt, "Error: expected snapshot_df.shape[0] > record_cnt"
     
     image_size = (41, 3*record_cnt)
     image = np.zeros(image_size)
     # current best bid and mid price
     snapshot_df.reset_index(drop=True, inplace=True)
     best_bid = snapshot_df.loc[record_cnt-1, 'BidPr1']
-    mid_price = snapshot_df.loc[record_cnt-1, 'mid_price']
     
     for i in range(record_cnt):
         snapshot = snapshot_df.iloc[i]
@@ -100,20 +99,16 @@ def single_image(snapshot_df: pd.DataFrame, record_cnt=5) -> list:
         # for any pixel in image, if it's value is larger than 255, set it to 255
         image[image > 255] = 255
     
-    def calculate_return(snapshot_df, record_cnt, offset, mid_price):
-        is_binary = True
-        diff = snapshot_df.loc[record_cnt - 1 + offset, 'mid_price'] - mid_price
+    def calc_label(snapshot_df, record_cnt, pred_cnt, is_binary=True):
+        diff = snapshot_df.loc[record_cnt - 1 + pred_cnt, 'TWAP_mid'] - snapshot_df.loc[record_cnt - 1, 'mid_price']
         diff = round(diff, 2)
-        if is_binary:  # binary
+        if is_binary:
             return 1 if diff >= 0.01 else 0
-        else:  # multi-class
+        else:
             return 1 if diff >= 0.01 else -1 if diff <= -0.01 else 0
+    label = calc_label(snapshot_df, record_cnt, pred_cnt)
 
-    ret5 = calculate_return(snapshot_df, record_cnt, 5, mid_price)
-    ret30 = calculate_return(snapshot_df, record_cnt, 30, mid_price)
-    
-    entry = [image, ret5, ret30]
-    return entry
+    return [image, label]
 
 def display_image(entry):
     """
@@ -150,12 +145,11 @@ def plot_snapshot(snapshot: pd.Series):
     plt.grid(axis='y', linestyle='--', alpha=0.7)
     plt.show()
 
-
-def generate_dataset(df, record_cnt=5):
+def generate_dataset(df, record_cnt=5, pred_cnt=5) -> list:
     '''Generate dataset of entries from df'''
     dataset = []
     for i in tqdm(range(len(df) - (record_cnt + 30))):
-        entry = single_image(df.iloc[i:i + (record_cnt + 30)], record_cnt)
+        entry = single_image(df.iloc[i:i + (record_cnt + 30)], record_cnt, pred_cnt)
         dataset.append(entry)
     return dataset
 
@@ -213,7 +207,7 @@ def save_report(df: pd.DataFrame, model_name='', balance=False, task_type='binar
     df.to_csv(fname, index=True)
     print(f"Report saved to: {fname}")
 
-def traditional_ml_pipeline(entries, balance=False):
+def traditional_ml_pipeline(entries, balance=False, data_type='img'):
     '''
     多个传统机器学习模型训练和评估
     :param entries: 生成的图像数据集
@@ -224,6 +218,10 @@ def traditional_ml_pipeline(entries, balance=False):
     '''
     # 数据准备
     X = np.array([entry[0] for entry in entries])
+    
+    if data_type == 'img':
+        # 图像数据集
+        X = np.array([entry[0].reshape for entry in entries])
     
     # default label: ret5
     # TODO: binary or multi-class

@@ -163,19 +163,10 @@ def cnn_train(model, train_loader, val_loader, lr=1e-5, epochs=20, target='ret5'
     model.to(device)
 
     # Choose loss function
-    # 修改：动态计算类别权重
-    # 获取训练集的真实标签分布
-    all_labels = []
-    for _, labels in train_loader:
-        all_labels.extend(labels.cpu().numpy())
-    class_counts = np.bincount(all_labels)
-    # 计算正样本权重（负样本数/正样本数）
-    pos_weight = torch.tensor([class_counts[0]/class_counts[1]], dtype=torch.float32).to(device)
-    print(f"类别权重计算完成 - 正样本权重: {pos_weight.item():.2f}")
     if isinstance(model, BinaryCNN):
-        criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)  # 应用类别权重
+        criterion = nn.BCEWithLogitsLoss()  # 应用类别权重
     else:
-        criterion = nn.CrossEntropyLoss(weight=torch.tensor([1.0, class_counts[0]/class_counts[1]], device=device))
+        criterion = nn.CrossEntropyLoss(device=device)
 
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
