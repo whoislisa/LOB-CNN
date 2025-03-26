@@ -55,7 +55,7 @@ def transformed_price(price: float, best_bid: float, tick_size=0.01) -> int:
     else:
         return max(-20, round(- ((abs(rel_price) - 1) // PLOT_K + PLOT_M)))
 
-def single_image(snapshot_df: pd.DataFrame, record_cnt=5, pred_cnt=5) -> list:
+def single_image(snapshot_df: pd.DataFrame, record_cnt=5, pred_cnt=5, is_binary=True) -> list:
     """
     生成单张图像
     :param snapshot_df: 包含 Level 2 数据的 DataFrame, shape[0] > record_cnt
@@ -106,7 +106,7 @@ def single_image(snapshot_df: pd.DataFrame, record_cnt=5, pred_cnt=5) -> list:
             return 1 if diff >= 0.01 else 0
         else:
             return 1 if diff >= 0.01 else -1 if diff <= -0.01 else 0
-    label = calc_label(snapshot_df, record_cnt, pred_cnt)
+    label = calc_label(snapshot_df, record_cnt, pred_cnt, is_binary)
 
     return [image, label]
 
@@ -169,13 +169,13 @@ def calc_label(snapshot_df, record_cnt, offset, mid_price, is_binary=True):
     else:  # multi-class
         return 1 if diff >= 0.01 else -1 if diff <= -0.01 else 0
 
-def generate_numerical_dataset(df, record_cnt=5):
+def generate_numerical_dataset(df, record_cnt=5, pred_cnt=5, is_binary=True) -> list:
     '''
     Generate dataset of numerical vol + price info
     :param df: DataFrame containing Level 2 data
     :param record_cnt: Number of records
     :return: dataset of numerical data
-    :rtype: list of tuples, each tuple contains (input, ret5, ret30)
+    :rtype: list of lists, each list contains [input, label]
     '''
     feature_list = []
     for l in range(1, 11):
@@ -186,17 +186,15 @@ def generate_numerical_dataset(df, record_cnt=5):
     feature_list.append('mid_price')
     
     dataset = []
-    for i in tqdm(range(len(df) - (record_cnt + 30))):
+    for i in tqdm(range(len(df) - (record_cnt + pred_cnt))):
         # input: numerical 
         input = df.iloc[i:i + record_cnt][feature_list].values  # (35, 40), flattened before training
         # labels
-        snapshot_df = df.iloc[i:i + (record_cnt + 30), :]
+        snapshot_df = df.iloc[i:i + record_cnt + pred_cnt, :]
         mid_price = snapshot_df.loc[i + record_cnt - 1, 'mid_price']
-        ret5 = calc_label(snapshot_df, record_cnt, 5, mid_price)
-        ret30 = calc_label(snapshot_df, record_cnt, 30, mid_price)
-        
-        entry = [input, ret5, ret30]
-        dataset.append(entry)
+        label = calc_label(snapshot_df, record_cnt, pred_cnt, mid_price, is_binary)
+
+        dataset.append([input, label])
     return dataset
 
 def save_report(df: pd.DataFrame, model_name='', balance=False, task_type='binary'):
@@ -207,41 +205,35 @@ def save_report(df: pd.DataFrame, model_name='', balance=False, task_type='binar
     df.to_csv(fname, index=True)
     print(f"Report saved to: {fname}")
 
-def traditional_ml_pipeline(entries, balance=False, data_type='img'):
+def traditional_ml_pipeline(dataset: dict, balance=False, data_type='img'):
     '''
     多个传统机器学习模型训练和评估
-    :param entries: 生成的图像数据集
+    :param dataset: 
     :param balance: 是否进行类别平衡处理
+    :param data_type: 数据类型，'img' 或 'num'
     :return: 训练和评估结果的 DataFrame
     
-    entries: list of tuples, each tuple contains (image, ret5, ret30)
+    dataset: list of lists, each list contains [input, label]
     '''
     # 数据准备
-    X = np.array([entry[0] for entry in entries])
+    train_X_flat = dataset['train_X']
+    train_y = dataset['train_y']
+    test_X_flat = dataset['test_X']
+    test_y = dataset['test_y']
     
-    if data_type == 'img':
-        # 图像数据集
-        X = np.array([entry[0].reshape for entry in entries])
-    
-    # default label: ret5
-    # TODO: binary or multi-class
-    y = np.array([1 if entry[1] == 1 else 0 for entry in entries])  # 确保二分类标签为0/1
-    X_flat = X.reshape(X.shape[0], -1)
-    
-    # 标准化
+    if data_type == 'img':  # 如果是图像数据需要展平
+        train_X_flat = train_X_flat.reshape(train_X_flat.shape[0], -1)
+        test_X_flat = test_X_flat.reshape(test_X_flat.shape[0], -1)
+
+    # 标准化处理（仅使用训练集统计量）
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_flat)
-    
-    # 划分数据集
-    # TODO: 需要保证时间顺序吗？
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, stratify=y, random_state=42
-    )
-    
-    # 类别平衡处理
+    X_train_scaled = scaler.fit_transform(train_X_flat)
+    X_test_scaled = scaler.transform(test_X_flat)
+
+    # 类别平衡处理（仅训练集）
     if balance:
-        smote = SMOTE()
-        X_train, y_train = smote.fit_resample(X_train, y_train)
+        smote = SMOTE(random_state=42)
+        X_train_scaled, train_y = smote.fit_resample(X_train_scaled, train_y)
     
     # 模型列表
     models = [
@@ -271,12 +263,12 @@ def traditional_ml_pipeline(entries, balance=False, data_type='img'):
         XGBClassifier(
             objective='binary:logistic',  # 二分类问题
             n_estimators=500,
+            # early_stopping_rounds=50,  # 早停
             learning_rate=0.05, 
             max_depth=6, 
             subsample=0.8, 
             colsample_bytree=0.8, 
             tree_method='hist',           # 适用于中等数据
-            scale_pos_weight=np.sum(y==0)/np.sum(y==1), # 类别不均衡修正
             n_jobs=-1,                    # 并行加速
             random_state=42
         )),
@@ -298,14 +290,15 @@ def traditional_ml_pipeline(entries, balance=False, data_type='img'):
     ]
     
     # 训练评估
-    reports = []
     results = []
     for name, model in models:
         start_time = time.time()
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        report = classification_report(y_test, y_pred, output_dict=True)
-        reports.append(report)
+        
+        model.fit(X_train_scaled, train_y)
+        y_pred = model.predict(X_test_scaled)
+        report = classification_report(test_y, y_pred, output_dict=True)
+        
+        elapsed = time.time() - start_time
         result = {
             'Model': name,
             'Accuracy': report['accuracy'],
@@ -315,8 +308,9 @@ def traditional_ml_pipeline(entries, balance=False, data_type='img'):
         }
         results.append(result)
         print(f"--- {name} ---")
-        print("Time elapsed: ", time.time() - start_time, " (s)")
-        print(result, '\n')
+        print("Time elapsed: ", elapsed, "(s)")
+        report_df = pd.DataFrame(report).transpose()
+        print(report_df)
         
     result_df = pd.DataFrame(results)
     result_df.set_index('Model', inplace=True)
