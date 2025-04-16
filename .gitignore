@@ -1,3 +1,6 @@
+.DS_Store
+__pycache__/
+
 *.sas7bdat
 /rawdata_L2HF2101_L2/
 /data_202101/
@@ -5,5 +8,5 @@
 /data_202111/
 /rawdata_L2HF2112_L2/
 /data_202112/
-/rawdata_ML/datasets*/
+datasets*/
 best_model_ret5.pth
