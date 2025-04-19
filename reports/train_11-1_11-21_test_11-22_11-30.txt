@@ -1,0 +1,496 @@
+    code_list = [
+        # 中证A50十大权重
+        '600519sh',  # 贵州茅台
+        '300750sz',  # 宁德时代
+        '601318sh',  # 中国平安
+        '600036sh',  # 招商银行
+        '600900sh',  # 长江电力
+        '000333sz',  # 美的集团
+        '002594sz',  # 比亚迪
+        '601899sh',  # 紫金矿业
+        '600030sh',  # 中信证券
+        '600276sh',  # 恒瑞医药
+    ]
+
+    downsample_args = {
+        "strategy": "fraction",
+        "value": 0.2,
+        "random_state": 42
+    }
+
+    train_df, test_df = load_data(
+        train_data_folder_list=[
+            "data_202111/2D_data_11-1_11-7",
+            "data_202111/2D_data_11-8_11-14",
+            "data_202111/2D_data_11-15_11-21"
+        ],
+        test_data_folder_list=["data_202111/2D_data_11-22_11-30"],
+        code_list=code_list,
+        downsample_args=downsample_args
+    )
+
+    # === Random Forest ===
+    print("\nTraining Random Forest...")
+    start = time.time()
+    rf = RandomForestClassifier(
+        n_estimators=50,
+        max_depth=15, 
+        n_jobs=-1, 
+        verbose=1, 
+        random_state=42
+    )
+    rf.fit(X_train_flat, y_train)
+    elapsed = time.time() - start
+    print(f"Time taken: {elapsed:.2f}s")
+    y_pred_rf = rf.predict(X_test_flat)
+    results['rf'] = classification_report(y_test, y_pred_rf, digits=4)
+    print("Random Forest:\n", results['rf'])
+
+    # === XGBoost ===
+    print("\nTraining XGBoost...")
+    start = time.time()
+    xgb = XGBClassifier(
+        max_depth=6,
+        n_estimators=50,
+        learning_rate=0.1,
+        subsample=0.8,
+        colsample_bytree=0.5,
+        tree_method='hist',  # 更快
+        n_jobs=-1,
+        verbosity=1,
+        eval_metric='logloss'
+    )
+    xgb.fit(X_train_flat, y_train)
+    elapsed = time.time() - start
+    print(f"Time taken: {elapsed:.2f}s")
+    y_pred_xgb = xgb.predict(X_test_flat)
+    results['xgb'] = classification_report(y_test, y_pred_xgb, digits=4)
+    print("XGBoost:\n", results['xgb'])
+
+
+训练集大小: (113676, 13440), 测试集大小: (36099, 13440)
+训练集标签分布: (array([0., 1.]), array([68918, 44758]))
+测试集标签分布: (array([0., 1.]), array([22742, 13357]))
+
+22742 / 36099 = 0.6300
+
+训练并评估 Baseline 模型...
+
+Training Random Forest...
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 8 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  34 tasks      | elapsed:   13.8s
+[Parallel(n_jobs=-1)]: Done  50 out of  50 | elapsed:   18.0s finished
+Time taken: 25.65s
+[Parallel(n_jobs=8)]: Using backend ThreadingBackend with 8 concurrent workers.
+[Parallel(n_jobs=8)]: Done  34 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=8)]: Done  50 out of  50 | elapsed:    0.1s finished
+Random Forest:
+               precision    recall  f1-score   support
+
+         0.0     0.6729    0.8748    0.7607     22742
+         1.0     0.5641    0.2760    0.3706     13357
+
+    accuracy                         0.6532     36099
+   macro avg     0.6185    0.5754    0.5656     36099
+weighted avg     0.6326    0.6532    0.6163     36099
+
+
+Training XGBoost...
+/Users/liuyufei/anaconda3/envs/lob_deep_learning/lib/python3.10/site-packages/xgboost/core.py:158: UserWarning: [14:33:45] WARNING: /var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_d9k8pmaj4_/croot/xgboost-split_1724073758172/work/src/learner.cc:740: 
+Parameters: { "use_label_encoder" } are not used.
+
+  warnings.warn(smsg, UserWarning)
+Time taken: 221.45s
+XGBoost:
+               precision    recall  f1-score   support
+
+         0.0     0.7242    0.4774    0.5754     22742
+         1.0     0.4369    0.6904    0.5352     13357
+
+    accuracy                         0.5562     36099
+   macro avg     0.5806    0.5839    0.5553     36099
+weighted avg     0.6179    0.5562    0.5605     36099
+
+
+=== 模型加权 F1 对比 ===
+{
+    'rf': '              precision    recall  f1-score   support\n\n         0.0     0.6729    0.8748    0.7607     22742\n         1.0     0.5641    0.2760    0.3706     13357\n\n    accuracy                         0.6532     36099\n   macro avg     0.6185    0.5754    0.5656     36099\nweighted avg     0.6326    0.6532    0.6163     36099\n', 
+    'xgb': '              precision    recall  f1-score   support\n\n         0.0     0.7242    0.4774    0.5754     22742\n         1.0     0.4369    0.6904    0.5352     13357\n\n    accuracy                         0.5562     36099\n   macro avg     0.5806    0.5839    0.5553     36099\nweighted avg     0.6179    0.5562    0.5605     36099\n'
+}
+
+
+
+
+    # === Random Forest ===
+    print("\nTraining Random Forest...")
+    start = time.time()
+    rf = RandomForestClassifier(
+        n_estimators=200,        # 增加树数量，增强模型稳定性
+        max_depth=10,            # 控制单棵树复杂度，防止过拟合
+        min_samples_split=10,    # 控制分裂，防止小样本暴力分裂
+        min_samples_leaf=5,      # 增强泛化能力
+        max_features='sqrt',     # 降低相关性提升泛化
+        n_jobs=-1,
+        random_state=42,
+        verbose=1
+    )
+
+    rf.fit(X_train_flat, y_train)
+    elapsed = time.time() - start
+    print(f"Time taken: {elapsed:.2f}s")
+    y_pred_rf = rf.predict(X_test_flat)
+    results['rf'] = classification_report(y_test, y_pred_rf, digits=4)
+    print("Random Forest:\n", results['rf'])
+
+    # === XGBoost ===
+    print("\nTraining XGBoost...")
+    start = time.time()
+    xgb = XGBClassifier(
+        n_estimators=300,         # 提高容量
+        learning_rate=0.05,       # 降低每次更新步长，减少过拟合风险
+        max_depth=8,              # 增强模型表达力
+        subsample=0.8,
+        colsample_bytree=0.8,     # 用更多特征
+        reg_alpha=1.0,            # L1正则，防止过拟合
+        reg_lambda=1.0,           # L2正则
+        tree_method='hist',
+        n_jobs=-1,
+        verbosity=1,
+        eval_metric='logloss'
+    )
+
+    xgb.fit(X_train_flat, y_train)
+    elapsed = time.time() - start
+    print(f"Time taken: {elapsed:.2f}s")
+    y_pred_xgb = xgb.predict(X_test_flat)
+    results['xgb'] = classification_report(y_test, y_pred_xgb, digits=4)
+    print("XGBoost:\n", results['xgb'])
+
+
+训练集大小: (113676, 13440), 测试集大小: (36099, 13440)
+训练集标签分布: (array([0., 1.]), array([68918, 44758]))
+测试集标签分布: (array([0., 1.]), array([22742, 13357]))
+
+22742 / 36099 = 0.6300
+
+训练并评估 Baseline 模型...
+
+Training Random Forest...
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 8 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  34 tasks      | elapsed:    7.3s
+[Parallel(n_jobs=-1)]: Done 184 tasks      | elapsed:   34.3s
+[Parallel(n_jobs=-1)]: Done 200 out of 200 | elapsed:   37.4s finished
+Time taken: 45.40s
+[Parallel(n_jobs=8)]: Using backend ThreadingBackend with 8 concurrent workers.
+[Parallel(n_jobs=8)]: Done  34 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=8)]: Done 184 tasks      | elapsed:    0.2s
+[Parallel(n_jobs=8)]: Done 200 out of 200 | elapsed:    0.2s finished
+Random Forest:
+               precision    recall  f1-score   support
+
+         0.0     0.6704    0.8802    0.7611     22742
+         1.0     0.5633    0.2632    0.3587     13357
+
+    accuracy                         0.6519     36099
+   macro avg     0.6168    0.5717    0.5599     36099
+weighted avg     0.6308    0.6519    0.6122     36099
+
+
+Training XGBoost...
+Time taken: 1153.57s
+XGBoost:
+               precision    recall  f1-score   support
+
+         0.0     0.7085    0.5516    0.6203     22742
+         1.0     0.4456    0.6136    0.5163     13357
+
+    accuracy                         0.5746     36099
+   macro avg     0.5771    0.5826    0.5683     36099
+weighted avg     0.6112    0.5746    0.5818     36099
+
+
+=== 模型加权 F1 对比 ===
+{'rf': '              precision    recall  f1-score   support\n\n         0.0     0.6704    0.8802    0.7611     22742\n         1.0     0.5633    0.2632    0.3587     13357\n\n    accuracy                         0.6519     36099\n   macro avg     0.6168    0.5717    0.5599     36099\nweighted avg     0.6308    0.6519    0.6122     36099\n', 'xgb': '              precision    recall  f1-score   support\n\n         0.0     0.7085    0.5516    0.6203     22742\n         1.0     0.4456    0.6136    0.5163     13357\n\n    accuracy                         0.5746     36099\n   macro avg     0.5771    0.5826    0.5683     36099\nweighted avg     0.6112    0.5746    0.5818     36099\n'}
+
+
+
+
+
+
+### CNNClassifier(): epochs=50, batch_size=128, lr=1e-4
+
+训练集大小: (198937, 1, 224, 60), 测试集大小: (90247, 1, 224, 60)
+训练集标签分布: (array([0., 1.]), array([120217,  78720]))
+测试集标签分布: (array([0., 1.]), array([56878, 33369]))
+
+56878 / 90247 = 0.6302
+
+
+开始训练 CNN...
+Epoch 1/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:13<00:00, 112.51it/s]
+Epoch 1: Loss=0.6312 | Val F1=0.6121
+Epoch 2/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:14<00:00, 107.07it/s]
+Epoch 2: Loss=0.6143 | Val F1=0.6222
+Epoch 3/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:13<00:00, 116.09it/s]
+Epoch 3: Loss=0.5978 | Val F1=0.6278
+Epoch 4/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:13<00:00, 112.48it/s]
+Epoch 4: Loss=0.5732 | Val F1=0.6348
+Epoch 5/50: 100%|████████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:15<00:00, 99.17it/s]
+Epoch 5: Loss=0.5355 | Val F1=0.6373
+Epoch 6/50: 100%|████████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:15<00:00, 97.64it/s]
+Epoch 6: Loss=0.4850 | Val F1=0.6318
+EarlyStopping counter: 1 / 4
+Epoch 7/50: 100%|████████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:16<00:00, 96.89it/s]
+Epoch 7: Loss=0.4266 | Val F1=0.6364
+EarlyStopping counter: 2 / 4
+Epoch 8/50: 100%|████████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:16<00:00, 96.52it/s]
+Epoch 8: Loss=0.3679 | Val F1=0.6400
+Epoch 9/50: 100%|████████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:16<00:00, 96.30it/s]
+Epoch 9: Loss=0.3138 | Val F1=0.6343
+EarlyStopping counter: 1 / 4
+Epoch 10/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:16<00:00, 96.22it/s]
+Epoch 10: Loss=0.2688 | Val F1=0.6358
+EarlyStopping counter: 2 / 4
+Epoch 11/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:16<00:00, 96.42it/s]
+Epoch 11: Loss=0.2325 | Val F1=0.6395
+EarlyStopping counter: 3 / 4
+Epoch 12/50: 100%|███████████████████████████████████████████████████████████████████████████████| 1555/1555 [00:16<00:00, 96.40it/s]
+Epoch 12: Loss=0.2030 | Val F1=0.6367
+EarlyStopping counter: 4 / 4
+触发 EarlyStopping，停止训练
+模型已保存到: cnn_model.pt
+训练曲线已保存为: training_plot.png
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.6976    0.7083    0.7029     56878
+         1.0     0.4894    0.4766    0.4829     33369
+
+    accuracy                         0.6226     90247
+   macro avg     0.5935    0.5924    0.5929     90247
+weighted avg     0.6206    0.6226    0.6216     90247
+
+
+
+
+### CNNClassifier(): epochs=50, batch_size=128, lr=5e-5
+
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.6787    0.7067    0.6924     56878
+         1.0     0.4623    0.4297    0.4454     33369
+
+    accuracy                         0.6043     90247
+   macro avg     0.5705    0.5682    0.5689     90247
+weighted avg     0.5987    0.6043    0.6011     90247
+
+
+
+
+### CNNClassifier(): epochs=50, batch_size=128, lr=1e-5
+
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.6821    0.7465    0.7128     56878
+         1.0     0.4851    0.4071    0.4426     33369
+
+    accuracy                         0.6210     90247
+   macro avg     0.5836    0.5768    0.5777     90247
+weighted avg     0.6093    0.6210    0.6129     90247
+
+
+
+
+### BinaryCNN(): epochs=50, batch_size=128, lr=1e-5
+
+开始训练 CNN...
+Epoch 1/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:26<00:00, 10.62it/s]
+Epoch 1: Loss=0.6525 | Val F1=0.5828
+Epoch 2/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:28<00:00, 10.45it/s]
+Epoch 2: Loss=0.6422 | Val F1=0.6411
+Epoch 3/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:26<00:00, 10.59it/s]
+Epoch 3: Loss=0.6371 | Val F1=0.6454
+Epoch 4/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:23<00:00, 10.83it/s]
+Epoch 4: Loss=0.6327 | Val F1=0.6337
+EarlyStopping counter: 1 / 4
+Epoch 5/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:24<00:00, 10.79it/s]
+Epoch 5: Loss=0.6280 | Val F1=0.6468
+Epoch 6/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:24<00:00, 10.79it/s]
+Epoch 6: Loss=0.6236 | Val F1=0.6380
+EarlyStopping counter: 1 / 4
+Epoch 7/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:24<00:00, 10.77it/s]
+Epoch 7: Loss=0.6191 | Val F1=0.6349
+EarlyStopping counter: 2 / 4
+Epoch 8/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:24<00:00, 10.76it/s]
+Epoch 8: Loss=0.6150 | Val F1=0.6429
+EarlyStopping counter: 3 / 4
+Epoch 9/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:27<00:00, 10.52it/s]
+Epoch 9: Loss=0.6099 | Val F1=0.6407
+EarlyStopping counter: 4 / 4
+触发 EarlyStopping，停止训练
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.6798    0.8350    0.7495     56878
+         1.0     0.5397    0.3298    0.4094     33369
+
+    accuracy                         0.6482     90247
+   macro avg     0.6098    0.5824    0.5794     90247
+weighted avg     0.6280    0.6482    0.6237     90247
+
+
+
+
+### BinaryCNN(): epochs=50, batch_size=128, lr=1e-4
+
+开始训练 CNN...
+Epoch 1/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:19<00:00, 11.19it/s]
+Epoch 1: Loss=0.6489 | Val F1=0.6280
+Epoch 2/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 10.99it/s]
+Epoch 2: Loss=0.6358 | Val F1=0.6538
+Epoch 3/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 10.97it/s]
+Epoch 3: Loss=0.6287 | Val F1=0.6426
+EarlyStopping counter: 1 / 4
+Epoch 4/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:22<00:00, 10.88it/s]
+Epoch 4: Loss=0.6232 | Val F1=0.6488
+EarlyStopping counter: 2 / 4
+Epoch 5/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:22<00:00, 10.89it/s]
+Epoch 5: Loss=0.6175 | Val F1=0.6562
+Epoch 6/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 11.01it/s]
+Epoch 6: Loss=0.6115 | Val F1=0.6494
+EarlyStopping counter: 1 / 4
+Epoch 7/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 11.03it/s]
+Epoch 7: Loss=0.6060 | Val F1=0.6612
+Epoch 8/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 11.00it/s]
+Epoch 8: Loss=0.5989 | Val F1=0.6577
+EarlyStopping counter: 1 / 4
+Epoch 9/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:22<00:00, 10.90it/s]
+Epoch 9: Loss=0.5919 | Val F1=0.6531
+EarlyStopping counter: 2 / 4
+Epoch 10/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 11.00it/s]
+Epoch 10: Loss=0.5839 | Val F1=0.6535
+EarlyStopping counter: 3 / 4
+Epoch 11/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 11.02it/s]
+Epoch 11: Loss=0.5756 | Val F1=0.6578
+EarlyStopping counter: 4 / 4
+触发 EarlyStopping，停止训练
+
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7107    0.6574    0.6830     56878
+         1.0     0.4822    0.5439    0.5112     33369
+
+    accuracy                         0.6154     90247
+   macro avg     0.5965    0.6006    0.5971     90247
+weighted avg     0.6262    0.6154    0.6195     90247
+
+
+
+
+### BinaryCNN(): epochs=50, batch_size=128, lr=1e-6
+
+开始训练 CNN...
+Epoch 1/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:21<00:00, 10.97it/s]
+Epoch 1: Loss=0.6624 | Val F1=0.6236
+Epoch 2/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:41<00:00,  9.61it/s]
+Epoch 2: Loss=0.6529 | Val F1=0.6120
+EarlyStopping counter: 1 / 4
+Epoch 3/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:43<00:00,  9.52it/s]
+Epoch 3: Loss=0.6491 | Val F1=0.6285
+Epoch 4/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:42<00:00,  9.55it/s]
+Epoch 4: Loss=0.6465 | Val F1=0.6333
+Epoch 5/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:43<00:00,  9.52it/s]
+Epoch 5: Loss=0.6445 | Val F1=0.6249
+EarlyStopping counter: 1 / 4
+Epoch 6/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:42<00:00,  9.55it/s]
+Epoch 6: Loss=0.6429 | Val F1=0.6381
+Epoch 7/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:43<00:00,  9.52it/s]
+Epoch 7: Loss=0.6413 | Val F1=0.6409
+Epoch 8/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:43<00:00,  9.50it/s]
+Epoch 8: Loss=0.6401 | Val F1=0.6421
+Epoch 9/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:49<00:00,  9.15it/s]
+Epoch 9: Loss=0.6390 | Val F1=0.6372
+EarlyStopping counter: 1 / 4
+Epoch 10/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:41<00:00,  9.62it/s]
+Epoch 10: Loss=0.6377 | Val F1=0.6446
+Epoch 11/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:40<00:00,  9.68it/s]
+Epoch 11: Loss=0.6371 | Val F1=0.6390
+EarlyStopping counter: 1 / 4
+Epoch 12/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:40<00:00,  9.68it/s]
+Epoch 12: Loss=0.6359 | Val F1=0.6397
+EarlyStopping counter: 2 / 4
+Epoch 13/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:40<00:00,  9.69it/s]
+Epoch 13: Loss=0.6348 | Val F1=0.6301
+EarlyStopping counter: 3 / 4
+Epoch 14/50: 100%|██████████████████████████████████████████████████████████████| 1555/1555 [02:40<00:00,  9.70it/s]
+Epoch 14: Loss=0.6345 | Val F1=0.6328
+EarlyStopping counter: 4 / 4
+
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.6716    0.8667    0.7568     56878
+         1.0     0.5499    0.2776    0.3689     33369
+
+    accuracy                         0.6489     90247
+   macro avg     0.6107    0.5721    0.5629     90247
+weighted avg     0.6266    0.6489    0.6134     90247
+
+
+
+
+### BinaryCNN_2(): epochs=50, batch_size=128, lr=1e-4
+
+开始训练 CNN...
+超参数: epochs=50, batch_size=128, lr=0.0001
+Epoch 1/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:49<00:00,  9.18it/s]
+Epoch 1: Loss=0.6545 | Val F1=0.5323
+Epoch 2/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:57<00:00,  8.74it/s]
+Epoch 2: Loss=0.6478 | Val F1=0.5606
+Epoch 3/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:58<00:00,  8.72it/s]
+Epoch 3: Loss=0.6446 | Val F1=0.6518
+Epoch 4/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:57<00:00,  8.78it/s]
+Epoch 4: Loss=0.6430 | Val F1=0.6368
+EarlyStopping counter: 1 / 4
+Epoch 5/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:55<00:00,  8.84it/s]
+Epoch 5: Loss=0.6422 | Val F1=0.5911
+EarlyStopping counter: 2 / 4
+Epoch 6/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:54<00:00,  8.90it/s]
+Epoch 6: Loss=0.6413 | Val F1=0.5974
+EarlyStopping counter: 3 / 4
+Epoch 7/50: 100%|███████████████████████████████████████████████████████████████| 1555/1555 [02:54<00:00,  8.89it/s]
+Epoch 7: Loss=0.6404 | Val F1=0.6444
+EarlyStopping counter: 4 / 4
+触发 EarlyStopping，停止训练
+模型已保存到: cnn_model.pt
+训练曲线已保存为: training_plot.png
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.6825    0.8364    0.7516     56878
+         1.0     0.5470    0.3366    0.4167     33369
+
+    accuracy                         0.6516     90247
+   macro avg     0.6147    0.5865    0.5842     90247
+weighted avg     0.6324    0.6516    0.6278     90247
+
+
+
+
+### BinaryCNN_2(): epochs=50, batch_size=128, lr=1e-5
+
+
+
+
+### VGG7(): epochs=50, batch_size=128, lr=1e-4
+

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from multiprocessing import Pool, cpu_count
+import gc  # 用于释放内存
 from joblib import Parallel, delayed
 
 
@@ -31,7 +31,7 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
     ask_price_cols = [f'AskPr{i}' for i in range(1, 6)]
     ask_volume_cols = [f'AskVol{i}' for i in range(1, 6)]
 
-    ### TODO
+    
     # real_start_date = df['datetime'].min() + pd.Timedelta(days=N_DAYS)
     # df = df[df['datetime'] >= real_start_date].reset_index(drop=True)
 
@@ -168,8 +168,8 @@ def process_single_stock(args):
         code, folder_path, save_path = args 
         df = pd.read_csv(f'{folder_path}/{code}.csv')
         df['datetime'] = pd.to_datetime(df['datetime'])
-        start_date = '2021-11-1'
-        end_date = '2021-11-22'
+        start_date = '2021-11-10'  # hist: 3,4,5; cur: 8...
+        end_date = '2021-11-22'  # before: 15
         df = df[(df['datetime'] >= start_date) & (df['datetime'] < end_date)]
         print(df.shape)
 
@@ -179,12 +179,10 @@ def process_single_stock(args):
             pass
         
         # --- csv format ---
-        # filename = f'{code}_{start_date[5:]}_{end_date[5:]}.csv'
-        filename = f'{code}.csv'
-        df_result.to_csv(f'{save_path}/{filename}', index=False)
+        # filename = f'{code}.csv'
+        # df_result.to_csv(f'{save_path}/{filename}', index=False)
 
         # --- feather format ---
-        # import pyarrow.feather as feather
         filename = f'{code}.feather'
         df_result.to_feather(f'{save_path}/{filename}')
     
@@ -208,11 +206,11 @@ if __name__ == '__main__':
         '600276sh',  # 恒瑞医药
     ]
 
-    save_path = 'data_202111/2D_data_11-1_11-21'
+    save_path = 'data_202111/2D_data_11-15_11-21'
     os.makedirs(save_path, exist_ok=True)
     args_list = [(code, folder_path, save_path) for code in code_list]
     # 并行处理
-    Parallel(n_jobs=min(len(code_list), os.cpu_count()), backend='loky')(
+    Parallel(n_jobs=min(len(code_list), os.cpu_count()//2), backend='loky')(
     delayed(process_single_stock)((code, folder_path, save_path))
     for code in code_list
     )
