@@ -12,6 +12,9 @@ IS_LINEAR=False
 IS_BINARY=True
 IS_TRAIN=True
 
+MAX_LEVEL = 10
+SPREAD_LEVEL = 3
+
 
 def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linear=False, N_DAYS=3, k=3):
     """
@@ -26,14 +29,12 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
     :return: DataFrame - 转换后的2D数据，每行对应一个样本图像
     """
 
-    bid_price_cols = [f'BidPr{i}' for i in range(1, 6)]
-    bid_volume_cols = [f'BidVol{i}' for i in range(1, 6)]
-    ask_price_cols = [f'AskPr{i}' for i in range(1, 6)]
-    ask_volume_cols = [f'AskVol{i}' for i in range(1, 6)]
+    bid_price_cols = [f'BidPr{i}' for i in range(1, MAX_LEVEL + 1)]
+    bid_volume_cols = [f'BidVol{i}' for i in range(1, MAX_LEVEL + 1)]
+    ask_price_cols = [f'AskPr{i}' for i in range(1, MAX_LEVEL + 1)]
+    ask_volume_cols = [f'AskVol{i}' for i in range(1, MAX_LEVEL + 1)]
 
-    
-    # real_start_date = df['datetime'].min() + pd.Timedelta(days=N_DAYS)
-    # df = df[df['datetime'] >= real_start_date].reset_index(drop=True)
+
 
     # --- 按天预计算 sigma, L, U, 优化计算速度 ---
     df['date'] = df['datetime'].dt.floor('1D')
@@ -85,7 +86,7 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
         sigma = sigma_dict[current_day]
         L, U = LU_dict[current_day]
 
-        def calculate_relative_price(price, p_base):
+        def calculate_relative_price(price, p_base):  # relative price 为纵坐标 y
             # linear / non-linear mapping
             delta_p = (price - p_base) / p_base
             if np.isnan(delta_p):
@@ -102,7 +103,7 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
         image = np.zeros((224, 3 * REC_CNT))
         for t in range(REC_CNT):
             # left col (bid side):
-            for level in range(5):
+            for level in range(MAX_LEVEL):
                 price = window_df[bid_price_cols[level]].iloc[t]
                 volume = window_df[bid_volume_cols[level]].iloc[t]
                 y = calculate_relative_price(price, p_base)
@@ -110,9 +111,10 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
                 if V_max <= 0 or np.isnan(V_max):
                     gray = 0
                 else:
-                    gray = 255 * np.log1p(volume) / np.log1p(V_max)
-                # gray = 255 * np.log1p(volume) / np.log1p(V_max)
-                image[y, 3 * t] = np.clip(gray, 0, 255)
+                    # gray = 255 * np.log1p(volume) / np.log1p(V_max)
+                    gray = np.log1p(volume) / np.log1p(V_max)  # 归一化
+                # image[y, 3 * t] = np.clip(gray, 0, 255)
+                image[y, 3 * t] = np.clip(gray, 0, 1)
             
             # center col (spread):
             spread_level = 3  # 用买卖第3档的价差
@@ -121,10 +123,11 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
                 price = window_df[f'{side}Pr{spread_level}'].iloc[t]
                 y = calculate_relative_price(price, p_base)
                 spread_price.append(y)
-            image[spread_price[0]:spread_price[1], 3 * t + 1] = 255
+            # image[spread_price[0]:spread_price[1], 3 * t + 1] = 255
+            image[spread_price[0]:spread_price[1], 3 * t + 1] = 1
 
             # right col (ask side):
-            for level in range(5):
+            for level in range(MAX_LEVEL):
                 price = window_df[ask_price_cols[level]].iloc[t]
                 volume = window_df[ask_volume_cols[level]].iloc[t]
                 y = calculate_relative_price(price, p_base)
@@ -132,9 +135,10 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
                 if V_max <= 0 or np.isnan(V_max):
                     gray = 0
                 else:
-                    gray = 255 * np.log1p(volume) / np.log1p(V_max)
-                # gray = 255 * np.log1p(volume) / np.log1p(V_max)
-                image[y, 3 * t + 2] = np.clip(gray, 0, 255)
+                    # gray = 255 * np.log1p(volume) / np.log1p(V_max)
+                    gray = np.log1p(volume) / np.log1p(V_max)  # 归一化
+                # image[y, 3 * t + 2] = np.clip(gray, 0, 255)
+                image[y, 3 * t + 2] = np.clip(gray, 0, 1)
 
         samples.append(image.flatten())
 
@@ -177,10 +181,28 @@ def process_single_stock(args):
         if not IS_TRAIN:
             # save_path = f'{save_path}/test'
             pass
-        
-        # --- csv format ---
-        # filename = f'{code}.csv'
-        # df_result.to_csv(f'{save_path}/{filename}', index=False)
+
+        # --- feather format ---
+        filename = f'{code}.feather'
+        df_result.to_feather(f'{save_path}/{filename}')
+    
+    except Exception as e:
+        print(f"[ERROR] {args[1]}/{args[0]}.csv 处理失败：{e}")
+
+def process_single_stock_2(args):
+    try:
+        code, folder_path, save_path = args 
+        df = pd.read_csv(f'{folder_path}/{code}.csv')
+        df['datetime'] = pd.to_datetime(df['datetime'])
+        start_date = '2021-11-22'  # hist: 3,4,5; cur: 8...
+        end_date = '2021-12-1'  # before: 15
+        df = df[(df['datetime'] >= start_date) & (df['datetime'] < end_date)]
+        print(df.shape)
+
+        df_result = calc_2D_data_with_label(df, REC_CNT, PRED_CNT, IS_BINARY, IS_LINEAR, 3, 3)
+        if not IS_TRAIN:
+            # save_path = f'{save_path}/test'
+            pass
 
         # --- feather format ---
         filename = f'{code}.feather'
@@ -206,12 +228,19 @@ if __name__ == '__main__':
         '600276sh',  # 恒瑞医药
     ]
 
-    save_path = 'data_202111/2D_data_11-15_11-21'
+    save_path = 'data_202111/2D_data_11-15_11-21_10level'
     os.makedirs(save_path, exist_ok=True)
-    args_list = [(code, folder_path, save_path) for code in code_list]
-    # 并行处理
-    Parallel(n_jobs=min(len(code_list), os.cpu_count()//2), backend='loky')(
+    # 并行处理  n_jobs=min(len(code_list), os.cpu_count()//2); os.cpu_count() = 8
+    Parallel(n_jobs=3, backend='loky')(
     delayed(process_single_stock)((code, folder_path, save_path))
+    for code in code_list[5:]
+    )
+
+    save_path = 'data_202111/2D_data_11-22_11-30_10level'
+    os.makedirs(save_path, exist_ok=True)
+    # 并行处理  n_jobs=min(len(code_list), os.cpu_count()//2); os.cpu_count() = 8
+    Parallel(n_jobs=4, backend='loky')(
+    delayed(process_single_stock_2)((code, folder_path, save_path))
     for code in code_list
     )
 

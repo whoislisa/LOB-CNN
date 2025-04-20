@@ -10,6 +10,8 @@ def visualize_image_sample(flat_sample, REC_CNT=20):
     将flatten后的图像样本可视化（224 x 3*REC_CNT）
     """
     image = flat_sample.values.reshape(224, 3*REC_CNT)
+    # times every entry by 255 to convert to 0-255 range
+    image = image * 255
     plt.figure(figsize=(12, 6))
     plt.imshow(image, cmap='gray', aspect='auto')
     plt.title("Order Book Image Sample")
@@ -21,5 +23,5 @@ def visualize_image_sample(flat_sample, REC_CNT=20):
 
 # 可视化第一个样本
 REC_CNT = 20
-pix_df = pd.read_csv('data_202111/2D_data_try/300750sz.csv') 
+pix_df = pd.read_feather('000333sz.feather') 
 visualize_image_sample(pix_df.iloc[1000, :-1], REC_CNT=REC_CNT)
