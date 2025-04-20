@@ -63,7 +63,7 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
             sigma_dict[day] = sigma
 
             p_base = hist_df[bid_price_cols[0]].iloc[0]
-            delta_p = (hist_df[bid_price_cols].values - p_base) / p_base
+            delta_p = (hist_df[bid_price_cols + ask_price_cols].values - p_base) / p_base
             L, U = np.nanquantile(delta_p, [0.05, 0.95]) if len(delta_p) else (-0.01, 0.01)
             if np.isnan(delta_p).all():
                 L, U = (-0.01, 0.01)
@@ -170,7 +170,8 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
 def process_single_stock(args):
     try:
         code, folder_path, save_path = args 
-        df = pd.read_csv(f'{folder_path}/{code}.csv')
+        # df = pd.read_csv(f'{folder_path}/{code}.csv')
+        df = pd.read_feather(f'{folder_path}/{code}.feather')
         df['datetime'] = pd.to_datetime(df['datetime'])
         start_date = '2021-11-10'  # hist: 3,4,5; cur: 8...
         end_date = '2021-11-22'  # before: 15
@@ -192,7 +193,8 @@ def process_single_stock(args):
 def process_single_stock_2(args):
     try:
         code, folder_path, save_path = args 
-        df = pd.read_csv(f'{folder_path}/{code}.csv')
+        # df = pd.read_csv(f'{folder_path}/{code}.csv')
+        df = pd.read_feather(f'{folder_path}/{code}.feather')
         df['datetime'] = pd.to_datetime(df['datetime'])
         start_date = '2021-11-22'  # hist: 3,4,5; cur: 8...
         end_date = '2021-12-1'  # before: 15
@@ -213,30 +215,44 @@ def process_single_stock_2(args):
     
 
 if __name__ == '__main__':
-    folder_path = 'data_202111'
+    # folder_path = 'data_202111'
+    # code_list = [
+    #     # 中证A50十大权重
+    #     '600519sh',  # 贵州茅台
+    #     '300750sz',  # 宁德时代
+    #     '601318sh',  # 中国平安
+    #     '600036sh',  # 招商银行
+    #     '600900sh',  # 长江电力
+    #     '000333sz',  # 美的集团
+    #     '002594sz',  # 比亚迪
+    #     '601899sh',  # 紫金矿业
+    #     '600030sh',  # 中信证券
+    #     '600276sh',  # 恒瑞医药
+    # ]
+
+    folder_path = 'data2_202111'
     code_list = [
-        # 中证A50十大权重
-        '600519sh',  # 贵州茅台
-        '300750sz',  # 宁德时代
-        '601318sh',  # 中国平安
-        '600036sh',  # 招商银行
-        '600900sh',  # 长江电力
-        '000333sz',  # 美的集团
-        '002594sz',  # 比亚迪
-        '601899sh',  # 紫金矿业
-        '600030sh',  # 中信证券
-        '600276sh',  # 恒瑞医药
+      '002031sz',  # 巨轮智能
+      '300766sz',  # 每日互动
+      '300377sz',  # 赢时胜
+      '300353sz',  # 东土科技
+      '300100sz',  # 双林股份
+      '300184sz',  # 力源信息
+      '300276sz',  # 三丰智能
+      '603009sh',  # 北特科技
+      '002379sz',  # 宏创控股
+      '300718sz',  # 长盛轴承
     ]
 
-    save_path = 'data_202111/2D_data_11-15_11-21_10level'
+    save_path = 'data2_202111/2D_data_11-15_11-21'  # always 10level
     os.makedirs(save_path, exist_ok=True)
     # 并行处理  n_jobs=min(len(code_list), os.cpu_count()//2); os.cpu_count() = 8
-    Parallel(n_jobs=3, backend='loky')(
+    Parallel(n_jobs=4, backend='loky')(
     delayed(process_single_stock)((code, folder_path, save_path))
-    for code in code_list[5:]
+    for code in code_list
     )
 
-    save_path = 'data_202111/2D_data_11-22_11-30_10level'
+    save_path = 'data2_202111/2D_data_11-22_11-30'
     os.makedirs(save_path, exist_ok=True)
     # 并行处理  n_jobs=min(len(code_list), os.cpu_count()//2); os.cpu_count() = 8
     Parallel(n_jobs=4, backend='loky')(

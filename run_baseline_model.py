@@ -183,18 +183,31 @@ def train_baselines(X_train, y_train, X_test, y_test):
 
 # ---------------- 主程序 -------------------
 if __name__ == "__main__":
+    # code_list = [
+    #     # 中证A50十大权重
+    #     '600519sh',  # 贵州茅台
+    #     '300750sz',  # 宁德时代
+    #     '601318sh',  # 中国平安
+    #     '600036sh',  # 招商银行
+    #     '600900sh',  # 长江电力
+    #     '000333sz',  # 美的集团
+    #     '002594sz',  # 比亚迪
+    #     '601899sh',  # 紫金矿业
+    #     '600030sh',  # 中信证券
+    #     '600276sh',  # 恒瑞医药
+    # ]
+    
     code_list = [
-        # 中证A50十大权重
-        '600519sh',  # 贵州茅台
-        '300750sz',  # 宁德时代
-        '601318sh',  # 中国平安
-        '600036sh',  # 招商银行
-        '600900sh',  # 长江电力
-        '000333sz',  # 美的集团
-        '002594sz',  # 比亚迪
-        '601899sh',  # 紫金矿业
-        '600030sh',  # 中信证券
-        '600276sh',  # 恒瑞医药
+      '002031sz',  # 巨轮智能
+      '300766sz',  # 每日互动
+      '300377sz',  # 赢时胜
+      '300353sz',  # 东土科技
+      '300100sz',  # 双林股份
+      '300184sz',  # 力源信息
+      '300276sz',  # 三丰智能
+      '603009sh',  # 北特科技
+      '002379sz',  # 宏创控股
+      '300718sz',  # 长盛轴承
     ]
 
     # train_data_folder = 'data_202111/2D_data_11-1_11-7'
@@ -212,6 +225,7 @@ if __name__ == "__main__":
     # X_test, y_test = preprocess_data_baseline(test_df, is_train=False)
 
 
+
     downsample_args = {
         "strategy": "fraction",
         "value": 0.2,
@@ -220,11 +234,11 @@ if __name__ == "__main__":
 
     train_df, test_df = load_data(
         train_data_folder_list=[
-            "data_202111/2D_data_11-1_11-7",
-            "data_202111/2D_data_11-8_11-14",
-            "data_202111/2D_data_11-15_11-21"
+            "data2_202111/2D_data_11-1_11-7",
+            "data2_202111/2D_data_11-8_11-14",
+            "data2_202111/2D_data_11-15_11-21"
         ],
-        test_data_folder_list=["data_202111/2D_data_11-22_11-30"],
+        test_data_folder_list=["data2_202111/2D_data_11-22_11-30"],
         code_list=code_list,
         downsample_args=downsample_args
     )

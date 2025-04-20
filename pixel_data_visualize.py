@@ -23,5 +23,5 @@ def visualize_image_sample(flat_sample, REC_CNT=20):
 
 # 可视化第一个样本
 REC_CNT = 20
-pix_df = pd.read_feather('000333sz.feather') 
-visualize_image_sample(pix_df.iloc[1000, :-1], REC_CNT=REC_CNT)
+pix_df = pd.read_feather('data2_202111/2D_data_11-1_11-7/300718sz.feather') 
+visualize_image_sample(pix_df.iloc[2060, :-1], REC_CNT=REC_CNT)

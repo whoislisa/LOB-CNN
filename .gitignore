@@ -10,3 +10,4 @@ __pycache__/
 /data_202112/
 datasets*/
 best_model_ret5.pth
+/data2_202111/
