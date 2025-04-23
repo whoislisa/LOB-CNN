@@ -398,6 +398,7 @@ weighted avg     0.6913    0.6984    0.6928     90247
 
 
 ### BinaryCNN_3: epochs=50, batch_size=128, lr=1e-4
+
 【学习率太低】
 
 ==== 第1次实验 ====
@@ -435,3 +436,132 @@ EarlyStopping counter: 6 / 6
     accuracy                         0.6492     90247
    macro avg     0.6111    0.5822    0.5789     90247
 weighted avg     0.6289    0.6492    0.6237     90247
+
+
+
+
+
+### BinaryVGG11: epochs=50, batch_size=64, lr=0.001
+
+==== 第1次实验 ====
+
+训练集大小: (198937, 1, 224, 60), 测试集大小: (90247, 1, 224, 60)
+训练集标签分布: (array([0., 1.]), array([116705,  82232]))
+测试集标签分布: (array([0., 1.]), array([56878, 33369]))
+开始训练 CNN...
+数据: CSI50
+模型: BinaryVGG11
+超参数: epochs=50, batch_size=64, lr=0.001
+
+Epoch 8/50: 100%|██████████████████████████████████████████████████████████████| 3109/3109 [04:19<00:00, 11.99it/s]
+Epoch 8: Loss=0.5868 | Val F1=0.7108
+
+Epoch 21/50: 100%|█████████████████████████████████████████████████████████████| 3109/3109 [04:19<00:00, 11.99it/s]
+Epoch 21: Loss=0.5591 | Val F1=0.6794
+EarlyStopping counter: 10 / 10
+触发 EarlyStopping，停止训练
+模型已保存到: M_BinaryVGG11_e50_b64_l0.001_D_CSI50.pt
+训练曲线已保存为:  M_BinaryVGG11_e50_b64_l0.001_D_CSI50_training_plot.png
+评估 CNN...
+
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7866    0.6158    0.6908     56878
+         1.0     0.5220    0.7152    0.6035     33369
+
+    accuracy                         0.6525     90247
+   macro avg     0.6543    0.6655    0.6471     90247
+weighted avg     0.6887    0.6525    0.6585     90247
+
+
+
+
+==== 第2次实验 ====
+
+开始训练 CNN...
+数据: CSI50
+模型: BinaryVGG11
+超参数: epochs=50, batch_size=64, lr=0.001
+
+Epoch 23/50: 100%|█████████████████████████████████████████████████████████████| 3109/3109 [05:48<00:00,  8.91it/s]
+Epoch 23: Loss=0.5731 | Val F1=0.7010
+EarlyStopping counter: 10 / 10
+触发 EarlyStopping，停止训练
+模型已保存到: M_BinaryVGG11_e50_b64_l0.001_D_CSI50.pt
+训练曲线已保存为:  M_BinaryVGG11_e50_b64_l0.001_D_CSI50_training_plot.png
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7272    0.8264    0.7737     56878
+         1.0     0.6145    0.4717    0.5337     33369
+
+    accuracy                         0.6952     90247
+   macro avg     0.6709    0.6490    0.6537     90247
+weighted avg     0.6855    0.6952    0.6849     90247
+
+
+
+
+
+### BinaryVGG11: epochs=50, batch_size=64, lr=0.0002
+
+==== 第1次实验 ====
+
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7227    0.6953    0.7088     56878
+         1.0     0.5122    0.5454    0.5283     33369
+
+    accuracy                         0.6399     90247
+   macro avg     0.6175    0.6203    0.6185     90247
+weighted avg     0.6449    0.6399    0.6420     90247
+
+
+
+==== 第2次实验 ====
+
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7265    0.6852    0.7053     56878
+         1.0     0.5108    0.5603    0.5344     33369
+
+    accuracy                         0.6390     90247
+   macro avg     0.6187    0.6228    0.6198     90247
+weighted avg     0.6467    0.6390    0.6421     90247
+
+
+
+
+### BinaryVGG11: epochs=50, batch_size=64, lr=0.0001
+
+==== 第1次实验 ====
+
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7225    0.6350    0.6759     56878
+         1.0     0.4843    0.5843    0.5296     33369
+
+    accuracy                         0.6162     90247
+   macro avg     0.6034    0.6097    0.6028     90247
+weighted avg     0.6344    0.6162    0.6218     90247
+
+
+
+==== 第2次实验 ====
+
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7234    0.6980    0.7105     56878
+         1.0     0.5143    0.5451    0.5293     33369
+
+    accuracy                         0.6415     90247
+   macro avg     0.6189    0.6216    0.6199     90247
+weighted avg     0.6461    0.6415    0.6435     90247
+
+

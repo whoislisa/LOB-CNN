@@ -10,10 +10,11 @@ REC_CNT=20
 PRED_CNT=5
 IS_LINEAR=False
 IS_BINARY=True
-IS_TRAIN=True
 
 MAX_LEVEL = 10
 SPREAD_LEVEL = 3
+
+k_list = [30]
 
 
 def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linear=False, N_DAYS=3, k=3):
@@ -42,7 +43,7 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
     date_to_index = {d: i for i, d in enumerate(all_trading_days)}
     # print("date_to_index:", date_to_index)
     sigma_dict = {}
-    LU_dict = {}
+    # LU_dict = {}
 
     for day in df['date'].unique():
         # hist_start = pd.to_datetime(day) - pd.Timedelta(days=N_DAYS)
@@ -55,19 +56,19 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
 
         if len(hist_df) < 10:
             sigma_dict[day] = 0.001
-            LU_dict[day] = (-0.01, 0.01)
+            # LU_dict[day] = (-0.01, 0.01)
         else:
             # returns = hist_df[bid_price_cols[0]].pct_change().dropna()
             returns = hist_df[bid_price_cols[0]].pct_change(fill_method=None).dropna()
             sigma = returns.std()
             sigma_dict[day] = sigma
 
-            p_base = hist_df[bid_price_cols[0]].iloc[0]
-            delta_p = (hist_df[bid_price_cols + ask_price_cols].values - p_base) / p_base
-            L, U = np.nanquantile(delta_p, [0.05, 0.95]) if len(delta_p) else (-0.01, 0.01)
-            if np.isnan(delta_p).all():
-                L, U = (-0.01, 0.01)
-            LU_dict[day] = (L, U)
+            # p_base = hist_df[bid_price_cols[0]].iloc[0]
+            # delta_p = (hist_df[bid_price_cols + ask_price_cols].values - p_base) / p_base
+            # L, U = np.nanquantile(delta_p, [0.05, 0.95]) if len(delta_p) else (-0.01, 0.01)
+            # if np.isnan(delta_p).all():
+            #     L, U = (-0.01, 0.01)
+            # LU_dict[day] = (L, U)
     # --- sigma, L, U 预计算结束 ---
 
     real_start_date = all_trading_days[N_DAYS]
@@ -84,7 +85,7 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
         # 使用预计算的 sigma, L, U
         current_day = window_df['date'].iloc[0]
         sigma = sigma_dict[current_day]
-        L, U = LU_dict[current_day]
+        # L, U = LU_dict[current_day]
 
         def calculate_relative_price(price, p_base):  # relative price 为纵坐标 y
             # linear / non-linear mapping
@@ -92,7 +93,8 @@ def calc_2D_data_with_label(df, REC_CNT=20, PRED_CNT=5, is_binary=True, is_linea
             if np.isnan(delta_p):
                 return 112
             if is_linear:
-                y = int(224 * (delta_p - L) / (U - L))
+                pass
+                # y = int(224 * (delta_p - L) / (U - L))
             else:
                 y = int(112 * np.tanh(delta_p / (k * sigma)) + 112)
             
@@ -178,17 +180,14 @@ def process_single_stock(args):
         df = df[(df['datetime'] >= start_date) & (df['datetime'] < end_date)]
         print(df.shape)
 
-        df_result = calc_2D_data_with_label(df, REC_CNT, PRED_CNT, IS_BINARY, IS_LINEAR, 3, 3)
-        if not IS_TRAIN:
-            # save_path = f'{save_path}/test'
-            pass
-
-        # --- feather format ---
-        filename = f'{code}.feather'
-        df_result.to_feather(f'{save_path}/{filename}')
+        for k in k_list:
+            df_result = calc_2D_data_with_label(df, REC_CNT, PRED_CNT, IS_BINARY, IS_LINEAR, 3, k=k)
+            # --- feather format ---
+            filename = f'{code}.feather'
+            df_result.to_feather(f'{save_path}/{filename}')
     
     except Exception as e:
-        print(f"[ERROR] {args[1]}/{args[0]}.csv 处理失败：{e}")
+        print(f"[ERROR] {args[1]}/{args[0]}.feather 处理失败：{e}")
 
 def process_single_stock_2(args):
     try:
@@ -201,14 +200,11 @@ def process_single_stock_2(args):
         df = df[(df['datetime'] >= start_date) & (df['datetime'] < end_date)]
         print(df.shape)
 
-        df_result = calc_2D_data_with_label(df, REC_CNT, PRED_CNT, IS_BINARY, IS_LINEAR, 3, 3)
-        if not IS_TRAIN:
-            # save_path = f'{save_path}/test'
-            pass
-
-        # --- feather format ---
-        filename = f'{code}.feather'
-        df_result.to_feather(f'{save_path}/{filename}')
+        for k in k_list:
+            df_result = calc_2D_data_with_label(df, REC_CNT, PRED_CNT, IS_BINARY, IS_LINEAR, 3, k=k)
+            # --- feather format ---
+            filename = f'{code}.feather'
+            df_result.to_feather(f'{save_path}/{filename}')
     
     except Exception as e:
         print(f"[ERROR] {args[1]}/{args[0]}.csv 处理失败：{e}")
@@ -259,4 +255,10 @@ if __name__ == '__main__':
     delayed(process_single_stock_2)((code, folder_path, save_path))
     for code in code_list
     )
+
+
+    # args = ('300377sz', folder_path, 'data2_try')
+    # process_single_stock(args)
+    # args = ('002379sz', folder_path, 'data2_try')
+    # process_single_stock(args)
 

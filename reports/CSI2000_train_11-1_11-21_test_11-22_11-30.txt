@@ -1,0 +1,150 @@
+### RF 没学到任何东西
+
+Training Random Forest...
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 8 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  34 tasks      | elapsed:    8.4s
+[Parallel(n_jobs=-1)]: Done 184 tasks      | elapsed:   43.7s
+[Parallel(n_jobs=-1)]: Done 300 out of 300 | elapsed:  1.2min finished
+Time taken: 76.53s
+[Parallel(n_jobs=8)]: Using backend ThreadingBackend with 8 concurrent workers.
+[Parallel(n_jobs=8)]: Done  34 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=8)]: Done 184 tasks      | elapsed:    0.1s
+[Parallel(n_jobs=8)]: Done 300 out of 300 | elapsed:    0.1s finished
+Random Forest:
+               precision    recall  f1-score   support
+
+         0.0     0.7354    0.9992    0.8472     24818
+         1.0     0.5652    0.0029    0.0058      8950
+
+    accuracy                         0.7351     33768
+   macro avg     0.6503    0.5010    0.4265     33768
+weighted avg     0.6903    0.7351    0.6242     33768
+
+
+
+------------------------------------- CNN ----------------------------------------
+
+--------------- Balanced
+
+### BinaryCNN_3: epochs=50, batch_size=128, lr=0.004
+
+训练集大小: (84085, 1, 224, 60), 测试集大小: (84417, 1, 224, 60)
+训练集标签分布: (array([0., 1.]), array([41998, 42087]))
+测试集标签分布: (array([0., 1.]), array([62129, 22288]))
+开始训练 CNN...
+模型: BinaryCNN_3
+超参数: epochs=50, batch_size=128, lr=0.004
+
+Epoch 47: Loss=0.4903 | Val F1=0.7427
+Epoch 48/50: 100%|█████████████████████████████████████████████████████████████████████████████████| 657/657 [00:31<00:00, 20.97it/s]
+Epoch 48: Loss=0.4894 | Val F1=0.7199
+EarlyStopping counter: 1 / 6
+Epoch 49/50: 100%|█████████████████████████████████████████████████████████████████████████████████| 657/657 [00:31<00:00, 20.99it/s]
+Epoch 49: Loss=0.4888 | Val F1=0.7356
+EarlyStopping counter: 2 / 6
+Epoch 50/50: 100%|█████████████████████████████████████████████████████████████████████████████████| 657/657 [00:31<00:00, 21.03it/s]
+Epoch 50: Loss=0.4866 | Val F1=0.7343
+EarlyStopping counter: 3 / 6
+模型已保存到: M_BinaryCNN_3_e50_b128_l0.004_D_CSI2000.pt
+训练曲线已保存为:  M_BinaryCNN_3_e50_b128_l0.004_D_CSI2000_training_plot.png
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.8669    0.5901    0.7022     62129
+         1.0     0.3955    0.7475    0.5173     22288
+
+    accuracy                         0.6316     84417
+   macro avg     0.6312    0.6688    0.6097     84417
+weighted avg     0.7424    0.6316    0.6534     84417
+
+# label 1 的 precision很低，错把很多实际为 1 的判断成 0
+
+
+==== 2 ====
+
+Epoch 34/80: 100%|█████████████████████████████████████████████████████████████| 1314/1314 [01:02<00:00, 20.89it/s]
+Epoch 34: Loss=0.4943 | Val F1=0.7448
+EarlyStopping counter: 8 / 8
+触发 EarlyStopping，停止训练
+模型已保存到: M_BinaryCNN_3_e80_b128_l0.004_D_CSI2000.pt
+训练曲线已保存为:  M_BinaryCNN_3_e80_b128_l0.004_D_CSI2000_training_plot.png
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.8540    0.6253    0.7220    124426
+         1.0     0.4002    0.7005    0.5094     44410
+
+    accuracy                         0.6451    168836
+   macro avg     0.6271    0.6629    0.6157    168836
+weighted avg     0.7346    0.6451    0.6660    168836
+
+
+
+
+
+------------- Unbalanced
+
+训练集大小: (170450, 1, 224, 60), 测试集大小: (84417, 1, 224, 60)
+训练集标签分布: (array([0., 1.]), array([130064,  40386]))
+测试集标签分布: (array([0., 1.]), array([62129, 22288]))
+
+62129 / 84417 = 0.7360
+
+开始训练 CNN...
+模型: BinaryCNN_3
+超参数: epochs=50, batch_size=128, lr=0.004
+Epoch 1/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:32<00:00,  8.76it/s]
+Epoch 1: Loss=0.5232 | Val F1=0.6170
+Epoch 2/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:39<00:00,  8.33it/s]
+Epoch 2: Loss=0.5136 | Val F1=0.6170
+EarlyStopping counter: 1 / 6
+Epoch 3/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:40<00:00,  8.31it/s]
+Epoch 3: Loss=0.4943 | Val F1=0.6170
+EarlyStopping counter: 2 / 6
+Epoch 4/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:41<00:00,  8.27it/s]
+Epoch 4: Loss=0.4664 | Val F1=0.6170
+EarlyStopping counter: 3 / 6
+Epoch 5/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:39<00:00,  8.37it/s]
+Epoch 5: Loss=0.4551 | Val F1=0.7080
+Epoch 6/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:40<00:00,  8.30it/s]
+Epoch 6: Loss=0.4490 | Val F1=0.6881
+EarlyStopping counter: 1 / 6
+Epoch 7/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:40<00:00,  8.29it/s]
+Epoch 7: Loss=0.4438 | Val F1=0.7094
+Epoch 8/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:38<00:00,  8.39it/s]
+Epoch 8: Loss=0.4389 | Val F1=0.7350
+Epoch 9/50: 100%|██████████████████████████████████████████████████████████████| 1332/1332 [02:41<00:00,  8.27it/s]
+Epoch 9: Loss=0.4330 | Val F1=0.7133
+EarlyStopping counter: 1 / 6
+Epoch 10/50: 100%|█████████████████████████████████████████████████████████████| 1332/1332 [02:40<00:00,  8.29it/s]
+Epoch 10: Loss=0.4295 | Val F1=0.6758
+EarlyStopping counter: 2 / 6
+Epoch 11/50: 100%|█████████████████████████████████████████████████████████████| 1332/1332 [02:40<00:00,  8.30it/s]
+Epoch 11: Loss=0.4262 | Val F1=0.7340
+EarlyStopping counter: 3 / 6
+Epoch 12/50: 100%|█████████████████████████████████████████████████████████████| 1332/1332 [02:38<00:00,  8.40it/s]
+Epoch 12: Loss=0.4223 | Val F1=0.7212
+EarlyStopping counter: 4 / 6
+Epoch 13/50: 100%|█████████████████████████████████████████████████████████████| 1332/1332 [02:40<00:00,  8.29it/s]
+Epoch 13: Loss=0.4185 | Val F1=0.7227
+EarlyStopping counter: 5 / 6
+Epoch 14/50: 100%|█████████████████████████████████████████████████████████████| 1332/1332 [02:42<00:00,  8.20it/s]
+Epoch 14: Loss=0.4159 | Val F1=0.7196
+EarlyStopping counter: 6 / 6
+触发 EarlyStopping，停止训练
+模型已保存到: M_BinaryCNN_3_e50_b128_l0.004_D_CSI2000.pt
+训练曲线已保存为:  M_BinaryCNN_3_e50_b128_l0.004_D_CSI2000_training_plot.png
+评估 CNN...
+预测结果对比 (classification_report):
+              precision    recall  f1-score   support
+
+         0.0     0.7791    0.9206    0.8440     62129
+         1.0     0.5520    0.2725    0.3649     22288
+
+    accuracy                         0.7495     84417
+   macro avg     0.6656    0.5966    0.6044     84417
+weighted avg     0.7192    0.7495    0.7175     84417
+
+# 还是学到了一点东西的，但是用于收益预测可能效果还不如全猜0

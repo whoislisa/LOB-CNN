@@ -8,6 +8,14 @@
 - 运行 `run_baseline_model.py` 对数据进行降采样，然后在简单机器学习模型（如线性模型、随机森林）上训练和测试
 - 运行 `run_cnn_model.py` 对数据进行降采样，然后在深度学习模型上训练和测试
 
+
+## 数据生成
+
+- 数据在本地生成，因为本地 CPU 比服务器上的快
+- 数据生成完毕，将文件生成压缩包，本地终端 scp 到服务器，如 `scp "/Users/liuyufei/Desktop/2D_data_11-22_11-30.zip" qbzhou21@166.111.96.24:/home/qbzhou21/liuyufei/local_data` 
+- 在服务器终端 cd 到对应文件夹，`unzip /home/qbzhou21/liuyufei/local_data/2D_data_11-22_11-30.zip` 解压数据到当前文件夹
+
+
 ## 数据存储
 
 - `data_{yyyymm}`文件夹
